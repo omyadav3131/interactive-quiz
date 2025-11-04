@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Interactive Quiz — Pro Demo</title>
+
+<!-- Bootstrap + Icons -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+
+<style>
+  :root{
+    --accent:#6f42c1;
+    --accent-2:#00b4d8;
+    --muted:#6c757d;
+  }
+  body{ background: linear-gradient(180deg,#f8fbff 0%, #eef6ff 100%); font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; color:#222;}
+  .app { max-width:1100px; margin:14px auto; padding:12px; }
+  .card-glass { background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.8)); border-radius:12px; box-shadow:0 8px 28px rgba(15,23,42,0.08); border:1px solid rgba(127,127,127,0.06); }
+  .brand { color:var(--accent); font-weight:800; letter-spacing:0.4px;}
+  .option-btn { text-align:left; width:100%; }
+  .badge-tier { display:inline-block; padding:6px 10px; border-radius:999px; background:linear-gradient(90deg,#ffd54a,#ffb74d); font-weight:700; color:#222; }
+  .progress-large { height:12px; border-radius:10px; }
+  .small-muted{ color:var(--muted); font-size:0.9rem;}
+  .avatar { width:36px; height:36px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:#eee; color:#333; font-weight:700; }
+  .admin-pill{ background:#f8d7da; color:#842029; padding:4px 8px; border-radius:8px; font-size:0.85rem; }
+  .pulse { animation:pulse 1.6s infinite; }
+  @keyframes pulse{ 0%{box-shadow:0 0 0 rgba(111,66,193,0.12);} 70%{box-shadow:0 8px 24px rgba(111,66,193,0.06);} 100%{box-shadow:0 0 0 rgba(111,66,193,0);} }
+  .fade-in{ animation:fadein .4s ease both; } @keyframes fadein{ from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none} }
+  .control-small{ font-size:0.9rem; padding:.28rem .5rem;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div><h3 class="brand">Quizify <small class="small-muted">— Gamified Pro Demo</small></h3></div>
+    <div class="d-flex gap-2 align-items-center">
+      <div id="user-info" class="text-end small-muted"></div>
+      <button id="btn-open-login" class="btn btn-outline-primary btn-sm">Login / Signup</button>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <!-- Left: Quiz Card -->
+    <div class="col-lg-8">
+      <div class="card-glass p-3 mb-3">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <h5 id="title">Welcome to Quizify</h5>
+            <div class="small-muted" id="subtitle">Practice, earn badges & climb the leaderboard.</div>
+          </div>
+          <div class="text-end">
+            <div class="small-muted">Level <strong id="ui-level">1</strong></div>
+            <div class="small-muted">Points <strong id="ui-points">0</strong></div>
+            <div id="badge-area" style="margin-top:6px"></div>
+          </div>
+        </div>
+
+        <hr/>
+
+        <div id="quiz-stage" class="fade-in">
+          <div class="d-flex justify-content-between mb-2">
+            <div class="small-muted">Q <span id="q-index">0</span>/<span id="q-count">0</span></div>
+            <div class="small-muted">Timer: <span id="timer" class="fw-bold">00</span>s</div>
+          </div>
+
+          <div id="question-card" class="p-3 mb-3 bg-white rounded-3" style="min-height:110px;">
+            <h5 id="q-text" class="mb-2">Press Start to load questions.</h5>
+            <div id="options" class="row"></div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button id="btn-start" class="btn btn-primary">Start Quiz</button>
+            <button id="btn-prev" class="btn btn-outline-secondary" disabled>Prev</button>
+            <button id="btn-next" class="btn btn-outline-secondary ms-auto" disabled>Next</button>
+            <button id="btn-submit" class="btn btn-success" disabled>Finish & Save</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Admin (local) -->
+      <div class="card-glass p-3 mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div><strong>Question Manager</strong> <div class="small-muted">(Local demo admin — password: <code>admin123</code>)</div></div>
+          <div><span id="admin-status" class="admin-pill">Not signed in</span></div>
+        </div>
+
+        <div class="mb-2">
+          <input id="q-filter" class="form-control form-control-sm" placeholder="Filter by text or level (e.g. level:2)"/>
+        </div>
+
+        <div id="q-list" style="max-height:180px; overflow:auto;"></div>
+
+        <div class="mt-2 d-flex gap-2">
+          <button id="btn-new-q" class="btn btn-outline-primary btn-sm">Add Question</button>
+          <button id="btn-import-sample" class="btn btn-outline-success btn-sm">Import Sample</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right: Profile & Leaderboard -->
+    <div class="col-lg-4">
+      <div class="card-glass p-3 mb-3">
+        <h6>Profile</h6>
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <div id="avatar" class="avatar">G</div>
+          <div>
+            <div id="display-name"><strong>Guest</strong></div>
+            <div class="small-muted" id="display-email">Not signed in</div>
+          </div>
+        </div>
+
+        <div class="mb-2">
+          <div class="small-muted">Progress</div>
+          <div class="progress progress-large">
+            <div id="progress-bar" class="progress-bar bg-primary" role="progressbar" style="width:0%"></div>
+          </div>
+        </div>
+
+        <div class="mb-2">
+          <div class="small-muted">Quick Actions</div>
+          <div class="d-grid gap-2 mt-2">
+            <button id="btn-view-leader" class="btn btn-outline-secondary btn-sm">View Leaderboard</button>
+            <button id="btn-clear-data" class="btn btn-outline-danger btn-sm">Clear Local Data</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-glass p-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <h6 class="mb-0">Top Scores</h6>
+          <small class="small-muted">Local</small>
+        </div>
+        <div id="leaderboard" style="margin-top:10px"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Modals and scripts -->
+<!-- Login Modal -->
+<div class="modal fade" id="loginModal" tabindex="-1">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header"><h6 class="modal-title">Sign in / Sign up</h6></div>
+      <div class="modal-body">
+        <input id="in-name" class="form-control mb-2" placeholder="Name"/>
+        <input id="in-email" class="form-control mb-2" placeholder="Email"/>
+        <input id="in-pass" class="form-control mb-2" placeholder="Password" type="password"/>
+        <div class="d-grid gap-2">
+          <button id="btn-do-signup" class="btn btn-primary btn-sm">Sign Up / Save</button>
+          <button id="btn-do-login" class="btn btn-outline-secondary btn-sm">Login</button>
+        </div>
+        <div class="small-muted mt-2">This demo uses localStorage for simple authentication.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Question Edit Modal -->
+<div class="modal fade" id="qEditModal" tabindex="-1">
+  <div class="modal-dialog modal-md modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header"><h6 class="modal-title">Add / Edit Question</h6></div>
+      <div class="modal-body">
+        <input id="q-text-in" class="form-control mb-2" placeholder="Question text"/>
+        <input id="q-opt-a" class="form-control mb-2" placeholder="Option A"/>
+        <input id="q-opt-b" class="form-control mb-2" placeholder="Option B"/>
+        <input id="q-opt-c" class="form-control mb-2" placeholder="Option C"/>
+        <input id="q-opt-d" class="form-control mb-2" placeholder="Option D"/>
+        <div class="d-flex gap-2">
+          <select id="q-correct" class="form-control form-control-sm">
+            <option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option>
+          </select>
+          <select id="q-level" class="form-control form-control-sm">
+            <option value="1">Level 1</option><option value="2">Level 2</option><option value="3">Level 3</option>
+          </select>
+        </div>
+        <div class="d-grid gap-2 mt-2">
+          <button id="btn-save-q" class="btn btn-success btn-sm">Save Question</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Result Modal -->
+<div class="modal fade" id="resultModal" tabindex="-1">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-body text-center">
+        <h5 id="res-points">Points: 0</h5>
+        <p id="res-badge" class="small-muted">Badge: —</p>
+        <div class="d-grid gap-2">
+          <button id="res-ok" class="btn btn-primary btn-sm">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ======= Data storage & helpers ======= */
+const STORAGE_KEY = 'quizify_v2_data';
+const USERS_KEY = 'quizify_v2_users';
+function loadData(){ return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+function saveData(arr){ localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); }
+function loadUsers(){ return JSON.parse(localStorage.getItem(USERS_KEY) || '{}'); }
+function saveUsers(obj){ localStorage.setItem(USERS_KEY, JSON.stringify(obj)); }
+
+function uid(){ return Date.now() + Math.floor(Math.random()*999); }
+function initials(name){ return (name||'G').split(' ').map(s=>s.charAt(0)).slice(0,2).join('').toUpperCase(); }
+
+/* ======= Sample default questions ======= */
+const defaultQs = [
+  {id:uid(), level:1, text:'Capital of India?', opts:['Mumbai','Delhi','Kolkata','Chennai'], correct:1},
+  {id:uid(), level:1, text:'What uses FIFO?', opts:['Stack','Queue','Tree','Graph'], correct:1},
+  {id:uid(), level:2, text:'HTTP method to update a resource?', opts:['GET','POST','PUT','DELETE'], correct:2},
+  {id:uid(), level:2, text:'CSS stands for?', opts:['Cascading Style Sheets','Color Style Sheets','Computer Style Sheets','Creative Style Sheets'], correct:0},
+  {id:uid(), level:3, text:'Which gives fastest memory access?', opts:['Array','LinkedList','Stack','Queue'], correct:0}
+];
+
+let QUESTIONS = loadData();
+if(!QUESTIONS || QUESTIONS.length===0){ QUESTIONS = defaultQs; saveData(QUESTIONS); }
+
+/* ======= App state ======= */
+let state = {
+  qIndex:-1, points:0, level:1, timeLeft:25, current:null, playing:false, user:null
+};
+
+/* ======= UI handles ======= */
+const ui = {
+  qText: document.getElementById('q-text'),
+  options: document.getElementById('options'),
+  qIndex: document.getElementById('q-index'),
+  qCount: document.getElementById('q-count'),
+  timer: document.getElementById('timer'),
+  points: document.getElementById('ui-points'),
+  level: document.getElementById('ui-level'),
+  badgeArea: document.getElementById('badge-area'),
+  btnStart: document.getElementById('btn-start'),
+  btnPrev: document.getElementById('btn-prev'),
+  btnNext: document.getElementById('btn-next'),
+  btnSubmit: document.getElementById('btn-submit'),
+  qList: document.getElementById('q-list'),
+  qFilter: document.getElementById('q-filter'),
+  avatar: document.getElementById('avatar'),
+  displayName: document.getElementById('display-name'),
+  displayEmail: document.getElementById('display-email'),
+  leaderboard: document.getElementById('leaderboard'),
+  btnOpenLogin: document.getElementById('btn-open-login'),
+  adminStatus: document.getElementById('admin-status'),
+  btnImportSample: document.getElementById('btn-import-sample'),
+  btnNewQ: document.getElementById('btn-new-q'),
+  btnClearData: document.getElementById('btn-clear-data'),
+  btnViewLeader: document.getElementById('btn-view-leader')
+};
+
+/* ======= Render functions ======= */
+function renderMeta(){ 
+  ui.qCount.innerText = QUESTIONS.length;
+  ui.points.innerText = state.points;
+  ui.level.innerText = state.level;
+  ui.badgeArea.innerHTML = '';
+  if(state.points>=500) ui.badgeArea.innerHTML = '<span class="badge-tier">Quiz Legend</span>';
+  else if(state.points>=300) ui.badgeArea.innerHTML = '<span class="badge-tier">Smart Thinker</span>';
+  else if(state.points>=100) ui.badgeArea.innerHTML = '<span class="badge-tier">Quick Learner</span>';
+  // profile
+  if(state.user){
+    ui.avatar.innerText = initials(state.user.name);
+    ui.displayName.innerHTML = '<strong>'+state.user.name+'</strong>';
+    ui.displayEmail.innerText = state.user.email;
+    document.getElementById('user-info').innerHTML = '<strong>'+state.user.name+'</strong><br/><small class="small-muted">'+state.user.email+'</small>';
+  } else {
+    ui.avatar.innerText = 'G';
+    ui.displayName.innerHTML = '<strong>Guest</strong>';
+    ui.displayEmail.innerText = 'Not signed in';
+    document.getElementById('user-info').innerHTML = '';
+  }
+  renderLeaderboard();
+}
+
+/* ======= Quiz flow ======= */
+let timerInterval=null;
+function startTimer(){
+  clearInterval(timerInterval);
+  state.timeLeft = 25; ui.timer.innerText = state.timeLeft;
+  timerInterval = setInterval(()=>{
+    state.timeLeft--; ui.timer.innerText = state.timeLeft;
+    if(state.timeLeft<=0){ clearInterval(timerInterval); lockOptions(); ui.btnNext.disabled=false; ui.btnSubmit.disabled=false; }
+  }, 1000);
+}
+function showQuestion(i){
+  state.qIndex = i; state.current = QUESTIONS[i];
+  ui.qIndex.innerText = i+1; ui.qText.innerText = QUESTIONS[i].text + ' (Level ' + QUESTIONS[i].level + ')';
+  ui.options.innerHTML = '';
+  QUESTIONS[i].opts.forEach((opt, idx)=>{
+    const col = document.createElement('div'); col.className='col-12 mb-2';
+    const b = document.createElement('button'); b.className='btn btn-outline-primary option-btn';
+    b.innerHTML = `<input type="radio" name="opt" style="margin-right:8px"/> ${opt}`;
+    b.onclick = ()=> chooseOption(idx,b);
+    col.appendChild(b); ui.options.appendChild(col);
+  });
+  ui.btnPrev.disabled = i===0; ui.btnNext.disabled = true; ui.btnSubmit.disabled = true;
+  startTimer();
+}
+function lockOptions(){ [...ui.options.querySelectorAll('button')].forEach(x=> x.disabled=true); }
+function chooseOption(idx,btn){
+  lockOptions(); clearInterval(timerInterval);
+  const q = QUESTIONS[state.qIndex];
+  const correct = (idx===q.correct);
+  const base = correct ? (10*q.level) : 0;
+  const timeBonus = correct ? Math.max(0, Math.floor(state.timeLeft/2)) : 0;
+  const gained = base + timeBonus;
+  state.points += gained;
+  if(state.points>=500) state.level=4; else if(state.points>=300) state.level=3; else if(state.points>=100) state.level=2;
+  renderMeta();
+  if(correct) { btn.classList.remove('btn-outline-primary'); btn.classList.add('btn-success'); } else { btn.classList.remove('btn-outline-primary'); btn.classList.add('btn-danger'); }
+  // highlight correct
+  [...ui.options.querySelectorAll('button')].forEach((b,i)=> { if(i===q.correct){ b.classList.remove('btn-outline-primary'); b.classList.add('border','border-2'); b.style.borderColor='#28a745'; }});
+  ui.btnNext.disabled=false; ui.btnSubmit.disabled=false;
+}
+function nextQuestion(){ if(state.qIndex+1>=QUESTIONS.length){ alert('End of questions, click Finish'); ui.btnNext.disabled=true; ui.btnSubmit.disabled=false; return; } showQuestion(state.qIndex+1); }
+function prevQuestion(){ if(state.qIndex-1>=0) showQuestion(state.qIndex-1); }
+
+/* ======= Leaderboard ======= */
+function saveScoreToLeader(name,pts,lv){
+  const key='quizify_leader_v2'; const arr=JSON.parse(localStorage.getItem(key)||'[]');
+  arr.push({name,points:pts,level:lv,time:new Date().toISOString()});
+  arr.sort((a,b)=>b.points-a.points); localStorage.setItem(key, JSON.stringify(arr.slice(0,20)));
+  renderLeaderboard();
+}
+function renderLeaderboard(){
+  const key='quizify_leader_v2'; const arr=JSON.parse(localStorage.getItem(key)||'[]');
+  ui.leaderboard.innerHTML='';
+  if(arr.length===0){ ui.leaderboard.innerHTML='<div class="small-muted">No scores yet</div>'; return; }
+  arr.forEach((e,i)=>{
+    const div=document.createElement('div'); div.className='d-flex justify-content-between align-items-center mb-2';
+    div.innerHTML = `<div class="d-flex gap-2 align-items-center"><div class="avatar">${(e.name||'G').split(' ').map(s=>s[0]).slice(0,2).join('').toUpperCase()}</div><div><strong>${e.name}</strong><div class="small-muted">Lv ${e.level}</div></div></div><div><strong>${e.points}</strong></div>`;
+    ui.leaderboard.appendChild(div);
+  })
+}
+
+/* ======= Manage questions UI ======= */
+function renderQuestionsList(filter){
+  ui.qList.innerHTML='';
+  const out = QUESTIONS.filter(q => {
+    if(!filter) return true;
+    const f = filter.toLowerCase();
+    if(f.startsWith('level:')) return q.level === parseInt(f.split(':')[1]||q.level);
+    return q.text.toLowerCase().includes(f) || q.opts.join(' ').toLowerCase().includes(f);
+  });
+  out.forEach(q=>{
+    const div = document.createElement('div'); div.className='d-flex justify-content-between align-items-center border-bottom py-2';
+    div.innerHTML = `<div><strong>${q.text}</strong><div class="small-muted">Level ${q.level}</div></div><div class="d-flex gap-2"><button class="btn btn-sm btn-outline-secondary" onclick="editQ('${q.id}')">Edit</button><button class="btn btn-sm btn-outline-danger" onclick="delQ('${q.id}')">Delete</button></div>`;
+    ui.qList.appendChild(div);
+  });
+}
+function editQ(id){
+  const q = QUESTIONS.find(x=>x.id==id);
+  if(!q) return;
+  $('#qEditModal').modal('show');
+  document.getElementById('q-text-in').value = q.text;
+  document.getElementById('q-opt-a').value = q.opts[0]||'';
+  document.getElementById('q-opt-b').value = q.opts[1]||'';
+  document.getElementById('q-opt-c').value = q.opts[2]||'';
+  document.getElementById('q-opt-d').value = q.opts[3]||'';
+  document.getElementById('q-correct').value = q.correct;
+  document.getElementById('q-level').value = q.level;
+  document.getElementById('btn-save-q').dataset.edit = q.id;
+}
+function delQ(id){ if(confirm('Delete question?')){ QUESTIONS = QUESTIONS.filter(x=>x.id!=id); saveData(QUESTIONS); renderQuestionsList(ui.qFilter.value); renderMeta(); } }
+function newQ(){ document.getElementById('btn-save-q').dataset.edit=''; document.getElementById('q-text-in').value=''; document.getElementById('q-opt-a').value=''; document.getElementById('q-opt-b').value=''; document.getElementById('q-opt-c').value=''; document.getElementById('q-opt-d').value=''; document.getElementById('q-correct').value='0'; document.getElementById('q-level').value='1'; $('#qEditModal').modal('show'); }
+
+/* ======= Save question ======= */
+document.getElementById('btn-save-q').onclick = function(){
+  const id = this.dataset.edit;
+  const text = document.getElementById('q-text-in').value.trim();
+  const opts = [document.getElementById('q-opt-a').value.trim(), document.getElementById('q-opt-b').value.trim(), document.getElementById('q-opt-c').value.trim(), document.getElementById('q-opt-d').value.trim()];
+  const correct = parseInt(document.getElementById('q-correct').value||'0');
+  const level = parseInt(document.getElementById('q-level').value||'1');
+  if(!text || !opts[0]){ alert('Question and option A are required'); return; }
+  if(id){ const q = QUESTIONS.find(x=>x.id==id); q.text=text; q.opts=opts; q.correct=correct; q.level=level; }
+  else { QUESTIONS.push({id:uid(), text, opts, correct, level}); }
+  saveData(QUESTIONS); $('#qEditModal').modal('hide'); renderQuestionsList(ui.qFilter.value); renderMeta();
+}
+
+/* ======= Login/Signup (localStorage) ======= */
+ui.btnOpenLogin.onclick = ()=> { $('#loginModal').modal('show'); }
+document.getElementById('btn-do-signup').onclick = function(){
+  const name = document.getElementById('in-name').value.trim();
+  const email = document.getElementById('in-email')
